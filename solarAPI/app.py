@@ -13,7 +13,9 @@ import sys
 from datetime import datetime, timezone
 
 import requests
+from dotenv import load_dotenv
 
+load_dotenv()
 # ---- Config -----------------------------------------------------------
 DB_PATH = os.environ.get("STATS_DB_PATH", "/home/claude/export.db")
 API_URL = "https://app.infigy.cz/api/devices/1000000066b0baf6/get"
@@ -45,6 +47,19 @@ def fetch_status() -> dict:
     resp.raise_for_status()
     return resp.json()
 
+def ensure_schema(conn: sqlite3.Connection):
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS stats (
+            id     INTEGER PRIMARY KEY AUTOINCREMENT,
+            metric TEXT    NOT NULL,
+            delta  REAL    NOT NULL,
+            total  REAL    NOT NULL,
+            at     TEXT    NOT NULL
+        )
+        """
+    )
+    conn.commit()
 
 def get_last(cur: sqlite3.Cursor, metric: str):
     """Return the most recent (delta, total) for a metric, or None if absent."""
@@ -99,6 +114,7 @@ def main():
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+    ensure_schema(conn)
 
     rows = build_rows(data, cur)
     insert_rows(conn, rows)
