@@ -11,11 +11,12 @@ import os
 import sqlite3
 import sys
 from datetime import datetime, timezone
-
+import time
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
 # ---- Config -----------------------------------------------------------
 DB_PATH = os.environ.get("STATS_DB_PATH", "/home/claude/export.db")
 API_URL = "https://app.infigy.cz/api/devices/1000000066b0baf6/get"
@@ -68,7 +69,7 @@ def get_last(cur: sqlite3.Cursor, metric: str):
         (metric,),
     )
     row = cur.fetchone()
-    return row  # (delta, total) or None
+    return row
 
 
 def build_rows(data: dict, cur: sqlite3.Cursor):
@@ -126,4 +127,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        main()
+        time.sleep(300)
