@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ---- Config -----------------------------------------------------------
-DB_PATH = os.environ.get("STATS_DB_PATH", "/home/claude/export.db")
+DB_PATH = os.environ.get("STATS_DB_PATH")
 API_URL = "https://app.infigy.cz/api/devices/1000000066b0baf6/get"
 AUTH_TOKEN = os.environ.get("INFIGY_AUTH_TOKEN")  # set this in your environment
 
