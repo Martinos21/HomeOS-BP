@@ -32,6 +32,7 @@ from dotenv import load_dotenv
 from flask import Flask, g, jsonify, request
 
 from tools.db import Database
+from zigbee.ZigbeeThread import ZigbeeThread
 from zigbee.zigbee_service import MAX_PAIRING_S, ZigbeeService, start_zigbee
 
 load_dotenv()
@@ -43,37 +44,6 @@ CORS_ORIGINS = os.environ.get("HOMEOS_CORS_ORIGINS", "*").split(",")
 
 log = logging.getLogger("homeos")
 app = Flask(__name__)
-
-
-# --------------------------------------------------------------------------
-# Zigbee ve vlastnim vlakne
-# --------------------------------------------------------------------------
-class ZigbeeThread:
-    def __init__(self):
-        self.loop = asyncio.new_event_loop()
-        self.service: ZigbeeService | None = None
-        self._ready = threading.Event()
-
-    def start(self, timeout: float = 30):
-        threading.Thread(target=self._run, name="zigbee", daemon=True).start()
-        self._ready.wait(timeout)
-
-    def _run(self):
-        asyncio.set_event_loop(self.loop)
-        try:
-            self.service = self.loop.run_until_complete(start_zigbee())
-        except Exception:
-            # bez donglu API dal vraci data, jen parovani hlasi 503
-            log.exception("Zigbee se nepodarilo nastartovat")
-        finally:
-            self._ready.set()
-        if self.service:
-            self.loop.run_forever()
-
-    def call(self, coro, timeout: float = 10):
-        """Spusti korutinu v Zigbee smycce a pocka na vysledek."""
-        return asyncio.run_coroutine_threadsafe(coro, self.loop).result(timeout)
-
 
 zigbee = ZigbeeThread()
 
