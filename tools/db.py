@@ -44,19 +44,45 @@ def q(ident: str) -> str:
 
 class Database:
     def __init__(self, path: str = DB_PATH):
-        self.conn = sqlite3.connect(path, timeout=10)
+        # soubor si SQLite vytvori samo, slozku ale ne -> vytvorime ji
+        path = os.path.abspath(os.path.expanduser(path))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        try:
+            self.conn = sqlite3.connect(path, timeout=10)
+        except sqlite3.OperationalError as e:
+            raise RuntimeError(f"Nejde otevrit databazi {path}: {e} "
+                               "(zkontroluj HOMEOS_DB_PATH / STATS_DB_PATH a prava)") from e
+        print(f"[DB] {path}")
         # WAL: Zigbee sluzba, solarAPI i API muzou cist/zapisovat zaroven
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS devices (
-                ieee         TEXT PRIMARY KEY,
-                name         TEXT NOT NULL UNIQUE,
-                table_name   TEXT NOT NULL UNIQUE,
-                manufacturer TEXT,
-                model        TEXT,
-                paired_at    TEXT NOT NULL,
-                last_seen    TEXT
+            CREATE TABLE IF NOT EXISTS devices
+            (
+                ieee
+                TEXT
+                PRIMARY
+                KEY,
+                name
+                TEXT
+                NOT
+                NULL
+                UNIQUE,
+                table_name
+                TEXT
+                NOT
+                NULL
+                UNIQUE,
+                manufacturer
+                TEXT,
+                model
+                TEXT,
+                paired_at
+                TEXT
+                NOT
+                NULL,
+                last_seen
+                TEXT
             )
             """
         )

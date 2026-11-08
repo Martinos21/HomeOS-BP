@@ -27,6 +27,7 @@ from zigpy.config import CONF_DATABASE, CONF_DEVICE, CONF_DEVICE_PATH
 from zigpy.zcl import AttributeReportedEvent, AttributeUpdatedEvent
 
 from tools.db import Database
+from zigbee.metrics import METRICS, Metric
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -193,7 +194,7 @@ async def start_zigbee(db: Database | None = None) -> ZigbeeService:
 
 async def main():
     service = await start_zigbee()
-    permit = int(os.environ.get("ZIGBEE_PERMIT_S", "0"))
+    permit = int(os.environ.get("ZIGBEE_PERMIT_S", "1"))
     if permit:
         await service.start_pairing(permit)
     try:
