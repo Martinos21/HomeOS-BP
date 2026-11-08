@@ -1,14 +1,4 @@
-"""
-Databaze HomeOS pro Zigbee zarizeni (SQLite).
 
-  devices          registr: IEEE adresa -> nazev -> nazev tabulky
-  dev_<nazev>      jedna tabulka pro kazde ESP, jeden sloupec pro kazdou hodnotu
-                   napr. dev_obyvak_teplota(id, at, temperature, humidity)
-
-Nazev posila ESP jako Model ID (setManufacturerAndModel("HomeOS", "obyvak_teplota")).
-Zarizeni se ale pozna podle IEEE adresy (vypalena v cipu), takze po
-preflashovani nebo znovusparovani se data dal ukladaji do stejne tabulky.
-"""
 
 import os
 import re
@@ -19,7 +9,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# stejna DB jako solarAPI (STATS_DB_PATH), pokud neni nastavena vlastni
 DB_PATH = (os.environ.get("HOMEOS_DB_PATH") or os.environ.get("STATS_DB_PATH")
            or "/home/pi/homeos.db")
 TABLE_PREFIX = "dev_"
@@ -44,7 +33,6 @@ def q(ident: str) -> str:
 
 class Database:
     def __init__(self, path: str = DB_PATH):
-        # soubor si SQLite vytvori samo, slozku ale ne -> vytvorime ji
         path = os.path.abspath(os.path.expanduser(path))
         os.makedirs(os.path.dirname(path), exist_ok=True)
         try:
@@ -53,7 +41,6 @@ class Database:
             raise RuntimeError(f"Nejde otevrit databazi {path}: {e} "
                                "(zkontroluj HOMEOS_DB_PATH / STATS_DB_PATH a prava)") from e
         print(f"[DB] {path}")
-        # WAL: Zigbee sluzba, solarAPI i API muzou cist/zapisovat zaroven
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute(
             """
@@ -91,7 +78,6 @@ class Database:
     def close(self):
         self.conn.close()
 
-    # --- registrace ---------------------------------------------------------
     def register_device(self, ieee: str, model: str | None,
                         manufacturer: str | None, columns: list[str]) -> str:
         """Zaregistruje ESP a vytvori/doplni jeho tabulku. Vrati nazev tabulky."""
@@ -119,7 +105,6 @@ class Database:
             f"CREATE TABLE IF NOT EXISTS {q(table)} ("
             " id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL)"
         )
-        # nova hodnota na ESP (napr. pribyla vlhkost) = novy sloupec
         existing = self.columns(table)
         for col in columns:
             if col not in existing:
@@ -135,7 +120,6 @@ class Database:
         ).fetchone()
         return f"{base}_{ieee.replace(':', '')[-4:]}" if taken else base
 
-    # --- zapis ------------------------------------------------------------------
     def insert(self, table: str, ieee: str, values: dict[str, float]):
         """Jeden radek = jedno mereni ESP (vsechny hodnoty se stejnym casem)."""
         now = iso_now()
@@ -148,7 +132,6 @@ class Database:
         self.conn.execute("UPDATE devices SET last_seen = ? WHERE ieee = ?", (now, ieee))
         self.conn.commit()
 
-    # --- cteni (pro API) ---------------------------------------------------
     def columns(self, table: str) -> list[str]:
         """Sloupce s hodnotami (bez id a at)."""
         return [r[1] for r in self.conn.execute(f"PRAGMA table_info({q(table)})")

@@ -34,7 +34,6 @@ logging.basicConfig(level=logging.INFO)
 
 CONFIG = {
     CONF_DEVICE: {CONF_DEVICE_PATH: os.environ.get("ZIGBEE_PORT", "/dev/ttyUSB0")},
-    # interni DB zigpy (klice site, sparovana zarizeni), NE databaze s merenimi
     CONF_DATABASE: os.environ.get("ZIGPY_DB_PATH", "/home/pi/zigbee.db"),
 }
 
@@ -54,7 +53,6 @@ class ZigbeeService:
         self.pairing_until = 0.0
         self.pairing_joined: list[dict] = []
 
-    # --- zigpy listener (vola ho zigpy) ------------------------------------
     def device_joined(self, device):
         print(f"[JOIN] {device.ieee} se pripojuje, cekam na interview...")
 
@@ -69,7 +67,6 @@ class ZigbeeService:
     def device_left(self, device):
         print(f"[LEFT] {device.ieee} (tabulka v DB zustava)")
 
-    # ----------------------------------------------------------------------
     def _spawn(self, coro):
         task = asyncio.create_task(coro)
         self._tasks.add(task)
@@ -118,7 +115,6 @@ class ZigbeeService:
                  "columns": columns})
         print(f"[READY] {ieee} -> {table} ({', '.join(columns)})")
 
-    # --- prijem dat ---------------------------------------------------------
     def _make_handler(self, ieee: str, metric: Metric):
         def handler(event):
             if event.attribute_id != metric.attr_id or event.value is None:
@@ -149,7 +145,6 @@ class ZigbeeService:
             print(f"[DATA] {table} {values}")
             self.db.insert(table, ieee, values)
 
-    # --- parovani (web, pozdeji fyzicke tlacitko) ---------------------------------
     def pairing_active(self) -> bool:
         return time.time() < self.pairing_until
 
