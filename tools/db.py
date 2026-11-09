@@ -1,5 +1,3 @@
-
-
 import os
 import re
 import sqlite3
@@ -9,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# stejna DB jako solarAPI (STATS_DB_PATH), pokud neni nastavena vlastni
 DB_PATH = (os.environ.get("HOMEOS_DB_PATH") or os.environ.get("STATS_DB_PATH")
            or "/home/pi/homeos.db")
 TABLE_PREFIX = "dev_"
@@ -163,3 +162,67 @@ class Database:
         args.append(limit)
         rows = self.conn.execute(sql, args).fetchall()
         return [dict(zip(cols, r)) for r in reversed(rows)]
+
+    def _where(self, column: str, since: str | None, metric: str | None = None):
+        where, args = f"WHERE {q(column)} IS NOT NULL", []
+        if metric is not None:
+            where += " AND metric = ?"
+            args.append(metric)
+        if since:
+            where += " AND at >= ?"
+            args.append(since)
+        return where, args
+
+    def stats(self, table: str, column: str, since: str | None = None,
+              metric: str | None = None) -> dict:
+        """Posledni / prumer / min / max jednoho sloupce (od `since`)."""
+        where, args = self._where(column, since, metric)
+        avg, mn, mx, cnt = self.conn.execute(
+            f"SELECT AVG({q(column)}), MIN({q(column)}), MAX({q(column)}), COUNT(*)"
+            f" FROM {q(table)} {where}", args
+        ).fetchone()
+        last = self.conn.execute(
+            f"SELECT at, {q(column)} FROM {q(table)} {where} ORDER BY id DESC LIMIT 1", args
+        ).fetchone()
+        return {"last": last[1] if last else None, "last_at": last[0] if last else None,
+                "avg": avg, "min": mn, "max": mx, "count": cnt}
+
+    def history(self, table: str, column: str, since: str | None = None,
+                points: int = 300, metric: str | None = None) -> list[dict]:
+        """Prubeh hodnot zhusteny do max. `points` useku (prumer/min/max v kazdem),
+        aby graf za mesic nemusel tahat desitky tisic radku."""
+        where, args = self._where(column, since, metric)
+        t0, t1, cnt = self.conn.execute(
+            f"SELECT MIN(julianday(at)), MAX(julianday(at)), COUNT(*) FROM {q(table)} {where}",
+            args,
+        ).fetchone()
+        if not cnt:
+            return []
+        if cnt <= points or t1 == t0:
+            rows = self.conn.execute(
+                f"SELECT at, {q(column)} FROM {q(table)} {where} ORDER BY at", args
+            ).fetchall()
+            return [{"at": at, "avg": v, "min": v, "max": v} for at, v in rows]
+        rows = self.conn.execute(
+            f"SELECT MIN(at), AVG({q(column)}), MIN({q(column)}), MAX({q(column)})"
+            f" FROM {q(table)} {where}"
+            f" GROUP BY MIN(CAST((julianday(at) - ?) / ? AS INTEGER), ? - 1) ORDER BY 1",
+            [*args, t0, (t1 - t0) / points, points],
+        ).fetchall()
+        return [{"at": at, "avg": a, "min": mn, "max": mx} for at, a, mn, mx in rows]
+
+    SOLAR_TABLE = "stats"
+    SOLAR_COLUMNS = ["total", "delta"]
+
+    def solar_metrics(self) -> list[dict]:
+        exists = self.conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (self.SOLAR_TABLE,)
+        ).fetchone()
+        if not exists:
+            return []
+        rows = self.conn.execute(
+            "SELECT metric, at, total, delta FROM stats WHERE id IN"
+            " (SELECT MAX(id) FROM stats GROUP BY metric) ORDER BY metric"
+        ).fetchall()
+        return [{"metric": m, "columns": self.SOLAR_COLUMNS,
+                 "latest": {"at": at, "total": t, "delta": d}} for m, at, t, d in rows]
