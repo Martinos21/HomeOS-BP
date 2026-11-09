@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps, ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -66,12 +67,17 @@ export function Screen({
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
+  // SDK 58: na iOS 26+ je hlavicka Stacku pruhledna (Liquid Glass) a obsah jde pod ni.
+  // Na obrazovkach se Stack hlavickou (tabs=false) proto nechame iOS dopocitat
+  // horni i dolni odsazeni samo; taby hlavicku nemaji a safe area si resi rucne.
+  const iosAutoInsets = !tabs && Platform.OS === 'ios';
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: c.background }}
+      contentInsetAdjustmentBehavior={iosAutoInsets ? 'automatic' : 'never'}
       contentContainerStyle={{
         paddingTop: tabs ? insets.top + Spacing.three : Spacing.three,
-        paddingBottom: insets.bottom + Spacing.five,
+        paddingBottom: (iosAutoInsets ? 0 : insets.bottom) + Spacing.five,
         paddingHorizontal: Spacing.three,
         alignItems: 'center',
       }}

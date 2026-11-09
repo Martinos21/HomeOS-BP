@@ -1,56 +1,30 @@
-# Welcome to your Expo app 👋
+# HomeOS frontend (Expo / React Native)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Jedna aplikace pro **web, Android i iOS** (Expo SDK 58, Expo Router).
 
-## Get started
+## Stránky
+- **Přehled** (`src/app/(tabs)/index.tsx`): widgety, které si uživatel přidá. Každý ukazuje
+  poslední / průměrnou / minimální / maximální hodnotu za zvolené období + mini graf.
+  Klik na widget → **detail** (`src/app/widget/[id].tsx`) s grafem průběhu všech hodnot z DB
+  (1 h / 24 h / 7 dní / 30 dní / vše), souhrnem a úpravou / smazáním widgetu.
+- **Automatizace** (`src/app/(tabs)/automations.tsx`): zatím připravená stránka.
+- **Nastavení** (`src/app/(tabs)/settings.tsx`): světlý / tmavý / podle systému, adresa serveru
+  a API klíč, info o Pi (Linux, kernel, Python, uptime, Zigbee, DB) a o aplikaci.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+## Spuštění
 ```
+npm install
+npx expo start          # w = web, a = Android, i = iOS (Expo Go)
+npx expo export -p web  # statický web do dist/ (SPA)
+```
+Výchozí adresa je `http://localhost:8080` a ze stejného zařízení backend klíč nechce. Z mobilu zadej v Nastavení IP adresu (např. `http://192.168.1.50:8080`) a `HOMEOS_API_KEY` z `backend/.env`.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Struktura
+- `src/lib/api.ts` volání backendu, `src/lib/format.ts` popisky a jednotky hodnot
+- `src/context/settings.tsx` téma + připojení, `src/context/widgets.tsx` widgety
+  (ukládají se lokálně v zařízení přes AsyncStorage / localStorage)
+- `src/components/line-chart.tsx` graf (react-native-svg), `src/components/ui.tsx` UI prvky
 
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Použité endpointy (backend/app.py)
+`/api/devices`, `/api/solar`, `/api/{devices|solar}/<x>/stats`, `/api/{devices|solar}/<x>/history`,
+`/api/system`

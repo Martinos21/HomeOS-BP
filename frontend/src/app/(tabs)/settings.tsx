@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 
 import { Button, Card, Field, Icon, InfoRow, Notice, Screen, SectionTitle, Segmented, Text } from '@/components/ui';
@@ -19,20 +19,31 @@ export default function Settings() {
   const s = useSettings();
   const [url, setUrl] = useState(s.apiUrl);
   const [key, setKey] = useState(s.apiKey);
+  // po nacteni ulozenych hodnot z uloziste
+  useEffect(() => {
+    setUrl(s.apiUrl);
+    setKey(s.apiKey);
+  }, [s.apiUrl, s.apiKey]);
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
 
   const system = useAsync(() => api.system(s.api), [s.api.url, s.api.key]);
+  // backend rekne, jestli od tohoto zarizeni klic chce (z localhostu ne)
+  const health = useAsync(() => api.health(s.api), [s.api.url]);
+  const keyRequired = health.data?.key_required;
 
   const dirty = url.trim() !== s.apiUrl || key.trim() !== s.apiKey;
 
   const saveAndTest = async () => {
-    const cfg = { url: url.trim(), key: key.trim() };
+    const cfg = { url: url.trim() || s.defaults.apiUrl, key: key.trim() };
+    setUrl(cfg.url);
+    setKey(cfg.key);
     s.update({ apiUrl: cfg.url, apiKey: cfg.key });
     setTesting(true);
     setTest(null);
     try {
       await api.devices(cfg); // overi i API klic (health ho nechce)
+      health.reload();
       setTest({ ok: true, text: 'Připojeno.' });
     } catch (e) {
       setTest({ ok: false, text: e instanceof Error ? e.message : String(e) });
@@ -60,17 +71,37 @@ export default function Settings() {
           value={url}
           onChangeText={setUrl}
           keyboardType="url"
-          hint="Raspberry Pi s backendem (uv run python -m backend.app)."
+          hint={`Výchozí ${s.defaults.apiUrl} (backend na stejném zařízení). Na mobilu zadej IP adresu zařízení s backendem, např. http://192.168.1.50:8080.`}
         />
         <Field
-          label="API klíč"
-          placeholder="HOMEOS_API_KEY z .env"
+          label={keyRequired === false ? 'API klíč (není potřeba)' : 'API klíč'}
+          placeholder="HOMEOS_API_KEY z backend/.env"
           value={key}
           onChangeText={setKey}
           secureTextEntry
+          hint={
+            keyRequired === false
+              ? 'Backend běží na stejném zařízení, klíč není potřeba.'
+              : keyRequired
+                ? 'Přístup z jiného zařízení: zadej HOMEOS_API_KEY z backend/.env.'
+                : 'Potřeba jen při přístupu z jiného zařízení (mobil).'
+          }
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' }}>
           <Button label={dirty ? 'Uložit a otestovat' : 'Otestovat'} icon="link-outline" loading={testing} onPress={saveAndTest} />
+          {url.trim() !== s.defaults.apiUrl || key.trim() !== s.defaults.apiKey ? (
+            <Button
+              label="Výchozí (localhost)"
+              icon="refresh-outline"
+              variant="ghost"
+              onPress={() => {
+                s.resetConnection();
+                setUrl(s.defaults.apiUrl);
+                setKey(s.defaults.apiKey);
+                setTest(null);
+              }}
+            />
+          ) : null}
           {test ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.one, flexShrink: 1 }}>
               <Icon name={test.ok ? 'checkmark-circle' : 'close-circle'} color={test.ok ? 'success' : 'danger'} />

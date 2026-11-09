@@ -32,13 +32,17 @@ async function get<T>(cfg: ApiConfig, path: string, params: Record<string, strin
   const timer = setTimeout(() => ctrl.abort(), 10000);
   let res: Response;
   try {
-    res = await fetch(url, { headers: { 'X-API-Key': cfg.key }, signal: ctrl.signal });
+    // klic se posila jen kdyz je zadany (z localhostu ho backend nechce)
+    res = await fetch(url, { headers: cfg.key ? { 'X-API-Key': cfg.key } : {}, signal: ctrl.signal });
   } catch {
     throw new ApiError('Server neodpovídá. Zkontroluj adresu a že backend běží.');
   } finally {
     clearTimeout(timer);
   }
   const body = await res.json().catch(() => null);
+  if (res.status === 401) {
+    throw new ApiError('Server chce API klíč (přístup z jiného zařízení). Zadej ho v Nastavení.', 401);
+  }
   if (!res.ok) throw new ApiError(body?.error ?? `Chyba serveru (${res.status})`, res.status);
   return body as T;
 }
@@ -50,7 +54,7 @@ function sourcePath(s: Source) {
 }
 
 export const api = {
-  health: (cfg: ApiConfig) => get<{ ok: boolean; zigbee_online: boolean }>(cfg, '/api/health'),
+  health: (cfg: ApiConfig) => get<{ ok: boolean; zigbee_online: boolean; key_required?: boolean }>(cfg, '/api/health'),
   system: (cfg: ApiConfig) => get<SystemInfo>(cfg, '/api/system'),
   devices: (cfg: ApiConfig) => get<Device[]>(cfg, '/api/devices'),
   solar: (cfg: ApiConfig) => get<SolarMetric[]>(cfg, '/api/solar'),

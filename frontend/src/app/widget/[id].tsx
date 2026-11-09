@@ -19,11 +19,16 @@ const STATS: Stat[] = ['last', 'avg', 'min', 'max'];
 /** Detail widgetu: prubeh vsech hodnot z databaze + souhrn za zvolene obdobi. */
 export default function WidgetDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { widgets, remove, move } = useWidgets();
+  const { widgets, remove, move, update } = useWidgets();
   const { api: cfg } = useSettings();
   const c = useColors();
   const widget = widgets.find((w) => w.id === id);
-  const [range, setRange] = useState<Range>(widget?.range === '1h' ? '1h' : widget?.range ?? '24h');
+  const [range, setRangeState] = useState<Range>(widget?.range ?? '24h');
+  // zvolene obdobi se ulozi do widgetu -> prumer/min/max na prehledu se pocita za nej
+  const setRange = (r: Range) => {
+    setRangeState(r);
+    if (widget) update(widget.id, { range: r });
+  };
 
   const key = JSON.stringify([widget?.source, range, cfg]);
   const history = useAsync(

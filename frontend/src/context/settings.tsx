@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Platform, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 
 import { Colors, type Palette } from '@/constants/theme';
 import type { ApiConfig } from '@/lib/api';
@@ -15,28 +15,30 @@ type Ctx = Settings & {
   colors: Palette;
   api: ApiConfig;
   update: (patch: Partial<Settings>) => void;
+  /** Vrati adresu a klic na vychozi hodnoty (localhost, bez klice). */
+  resetConnection: () => void;
+  defaults: { apiUrl: string; apiKey: string };
 };
 
 const KEY = 'homeos.settings';
 
-/** Na webu je frontend typicky servirovany ze stejneho Pi -> API na stejnem hostu, port 8080. */
-function defaultUrl() {
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
-    return `${window.location.protocol}//${window.location.hostname}:8080`;
-  }
-  return '';
-}
+/**
+ * Vychozi pripojeni: backend na stejnem zarizeni. Z localhostu backend klic
+ * nevyzaduje, klic se zadava jen pro pristup odjinud (mobil v siti).
+ */
+export const DEFAULTS = { apiUrl: 'http://localhost:8080', apiKey: '' };
 
 const SettingsContext = createContext<Ctx | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
   const [loaded, setLoaded] = useState(false);
-  const [settings, setSettings] = useState<Settings>({ themeMode: 'system', apiUrl: '', apiKey: '' });
+  const [settings, setSettings] = useState<Settings>({ themeMode: 'system', ...DEFAULTS });
 
   useEffect(() => {
-    loadJSON<Settings>(KEY, { themeMode: 'system', apiUrl: defaultUrl(), apiKey: '' }).then((s) => {
-      setSettings(s);
+    loadJSON<Settings>(KEY, { themeMode: 'system', ...DEFAULTS }).then((s) => {
+      // prazdne pole = pouzit vychozi hodnotu z .env
+      setSettings({ ...s, apiUrl: s.apiUrl || DEFAULTS.apiUrl });
       setLoaded(true);
     });
   }, []);
@@ -58,6 +60,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       colors: Colors[scheme],
       api: { url: settings.apiUrl.trim(), key: settings.apiKey.trim() },
       update,
+      resetConnection: () => update(DEFAULTS),
+      defaults: DEFAULTS,
     };
   }, [settings, loaded, system, update]);
 

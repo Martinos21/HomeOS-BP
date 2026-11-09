@@ -20,7 +20,6 @@ import {
 import type { Range, Source, Stat } from '@/lib/types';
 
 const STATS = (Object.keys(STAT_LABEL) as Stat[]).map((s) => ({ value: s, label: STAT_LABEL[s] }));
-const RANGES = (Object.keys(RANGE_LABEL) as Range[]).map((r) => ({ value: r, label: RANGE_LABEL[r] }));
 
 /** Pridani / uprava widgetu: zdroj (ESP nebo solar) -> hodnota -> statistika -> obdobi. */
 export default function EditWidget() {
@@ -35,7 +34,8 @@ export default function EditWidget() {
   );
   const [column, setColumn] = useState<string | null>(existing?.source.column ?? null);
   const [stat, setStat] = useState<Stat>(existing?.stat ?? 'last');
-  const [range, setRange] = useState<Range>(existing?.range ?? '24h');
+  // obdobi se vybira az v detailu widgetu (u grafu), tady jen zachovat / vychozi 24 h
+  const range: Range = existing?.range ?? '24h';
   const [title, setTitle] = useState(existing?.title ?? '');
 
   const sources = useAsync(async () => {
@@ -123,10 +123,7 @@ export default function EditWidget() {
         <SectionTitle>3. Co zobrazit</SectionTitle>
         <Segmented value={stat} options={STATS} onChange={setStat} />
 
-        <SectionTitle>{stat === 'last' ? '4. Období mini grafu' : '4. Za jaké období'}</SectionTitle>
-        <Segmented value={range} options={RANGES} onChange={setRange} />
-
-        <SectionTitle>5. Název (nepovinné)</SectionTitle>
+        <SectionTitle>4. Název (nepovinné)</SectionTitle>
         <Field label="Vlastní název" placeholder={d?.label ?? 'např. Obývák'} value={title} onChangeText={setTitle} autoCapitalize="sentences" />
 
         {source && d ? (
@@ -142,6 +139,11 @@ export default function EditWidget() {
                 {formatValue(preview.data?.[stat], d.digits)} {d.unit}
               </Text>
             )}
+            {stat !== 'last' ? (
+              <Text variant="caption" color="textSecondary">
+                Období změníš v detailu widgetu (klikni na něj na přehledu).
+              </Text>
+            ) : null}
           </Card>
         ) : null}
 

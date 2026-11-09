@@ -29,9 +29,9 @@ export default function Dashboard() {
       right={<IconButton icon="add-circle-outline" label="Přidat widget" onPress={addWidget} color="accent" />}
       refreshing={false}
       onRefresh={() => setRefreshKey((k) => k + 1)}>
-      {!api.url || !api.key ? (
+      {!api.url ? (
         <Notice
-          text="Nejdřív nastav adresu serveru a API klíč."
+          text="Nejdřív nastav adresu serveru."
           action={<Button compact variant="secondary" label="Nastavení" onPress={() => router.navigate('/settings')} />}
         />
       ) : null}
