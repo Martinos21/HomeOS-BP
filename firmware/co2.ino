@@ -39,31 +39,25 @@ void prerus() {
 }*/
 
 #include <Arduino.h>
-#ifndef ZIGBEE_MODE_ED
-#error "V menu Tools -> Zigbee Mode musis vybrat 'Zigbee ED (End Device)'"
-#endif
-
 #include "MQ135.h"
 #include "Zigbee.h"
 
 #define pinA 3
 #define pinD 2
+#define CO2_ENDPOINT 10
 
 MQ135 senzorMQ = MQ135(pinA, 630.0);
-ZigbeeCO2sensor zbCO2Sensor = ZigbeeCO2Sensor();
+ZigbeeCarbonDioxideSensor zbCO2Sensor = ZigbeeCarbonDioxideSensor(CO2_ENDPOINT);
 
 void setup() {
   Serial.begin(115200);
-
-  Wire.begin(I2C_SDA,I2C_SCL);
-  Wire.setClock(100000);
-  delay(100);
+  analogReadResolution(10);   // knihovna MQ135 pocita s rozsahem 0-1023
 
   // Volitelne: nazev vyrobce a modelu
   zbCO2Sensor.setManufacturerAndModel("DIY", "CO2Sensor");
 
-  // Rozsah teplot (min, max)
-  //zbCO2Sensor.setMinMaxValue(-10, 50);
+  // Rozsah CO2 v ppm (min, max)
+  zbCO2Sensor.setMinMaxValue(0, 5000);
 
   // Pridani endpointu do Zigbee
   Zigbee.addEndpoint(&zbCO2Sensor);
@@ -80,11 +74,6 @@ void setup() {
     delay(100);
   }
   Serial.println("\nPripojeno k Zigbee siti!");
-
-  // Nastav teplotu na 10 a odesli
-  //zbCO2Sensor.setTemperature(0);
-  //zbTempSensor.reportTemperature();
-  //Serial.println("Odeslano: temp:22");
 }
 
 void loop() {
@@ -93,9 +82,8 @@ void loop() {
     float co2 = senzorMQ.getPPM();
     Serial.println("CO2 je:");
     Serial.println(co2);
-    zbCO2Sensor.setC02(co2);
-    bool ok = zbCO2Sensor.reportCO2();
-    Serial.printf("Report odeslan: %s\n", ok ? "OK" : "SELHAL");
+    zbCO2Sensor.setCarbonDioxide(co2);
+    zbCO2Sensor.report();
     lastReport = millis();
   }
   delay(100);
