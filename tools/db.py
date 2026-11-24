@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_PATH = (os.environ.get("HOMEOS_DB_PATH") or os.environ.get("STATS_DB_PATH")
-           or "/home/pi/homeos.db")
+           or "/root/HomeOS-storage/export.db")
 TABLE_PREFIX = "dev_"
 
 
@@ -163,3 +163,29 @@ class Database:
         args.append(limit)
         rows = self.conn.execute(sql, args).fetchall()
         return [dict(zip(cols, r)) for r in reversed(rows)]
+
+    def stats(self, table, column, since=None):
+        where = f"WHERE {q(column)} IS NOT NULL" + (" AND at >= ?" if since else "")
+        args = [since] if since else []
+        avg, mn, mx, cnt = self.conn.execute(
+            f"SELECT AVG({q(column)}), MIN({q(column)}), MAX({q(column)}), COUNT(*) FROM {q(table)} {where}", args).fetchone()
+        last = self.conn.execute(
+            f"SELECT at, {q(column)} FROM {q(table)} {where} ORDER BY id DESC LIMIT 1", args).fetchone()
+        return {"last": last[1] if last else None, "last_at": last[0] if last else None,
+                "avg": avg, "min": mn, "max": mx, "count": cnt}
+
+    def history(self, table, column, since=None, points=300):
+        where = f"WHERE {q(column)} IS NOT NULL" + (" AND at >= ?" if since else "")
+        args = [since] if since else []
+        t0, t1, cnt = self.conn.execute(
+            f"SELECT MIN(julianday(at)), MAX(julianday(at)), COUNT(*) FROM {q(table)} {where}", args).fetchone()
+        if not cnt:
+            return []
+        if cnt <= points or t1 == t0:
+            rows = self.conn.execute(f"SELECT at, {q(column)} FROM {q(table)} {where} ORDER BY at", args).fetchall()
+            return [{"at": a, "avg": v, "min": v, "max": v} for a, v in rows]
+        rows = self.conn.execute(
+            f"SELECT MIN(at), AVG({q(column)}), MIN({q(column)}), MAX({q(column)}) FROM {q(table)} {where}"
+            f" GROUP BY MIN(CAST((julianday(at) - ?) / ? AS INTEGER), ? - 1) ORDER BY 1",
+            [*args, t0, (t1 - t0) / points, points]).fetchall()
+        return [{"at": a, "avg": av, "min": mn, "max": mx} for a, av, mn, mx in rows]
