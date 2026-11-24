@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 import { Colors, type Palette } from '@/constants/theme';
 import type { ApiConfig } from '@/lib/api';
@@ -18,6 +18,7 @@ type Ctx = Settings & {
   /** Vrati adresu a klic na vychozi hodnoty (localhost, bez klice). */
   resetConnection: () => void;
   defaults: { apiUrl: string; apiKey: string };
+  isWeb: boolean
 };
 
 const KEY = 'homeos.settings';
@@ -26,7 +27,10 @@ const KEY = 'homeos.settings';
  * Vychozi pripojeni: backend na stejnem zarizeni. Z localhostu backend klic
  * nevyzaduje, klic se zadava jen pro pristup odjinud (mobil v siti).
  */
-export const DEFAULTS = { apiUrl: 'http://localhost:8080', apiKey: '' };
+export const IS_WEB = Platform.OS === 'web';
+export const WEB_API_URL = 'http://localhost:8080';
+
+const DEFAULTS = { apiUrl: '', apiKey: '' };
 
 const SettingsContext = createContext<Ctx | null>(null);
 
@@ -37,8 +41,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadJSON<Settings>(KEY, { themeMode: 'system', ...DEFAULTS }).then((s) => {
-      // prazdne pole = pouzit vychozi hodnotu z .env
-      setSettings({ ...s, apiUrl: s.apiUrl || DEFAULTS.apiUrl });
+      const apiUrl = !IS_WEB && s.apiUrl === WEB_API_URL ? '' : s.apiUrl;
+      setSettings({ ...s, apiUrl });
       setLoaded(true);
     });
   }, []);
@@ -58,10 +62,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       loaded,
       scheme,
       colors: Colors[scheme],
-      api: { url: settings.apiUrl.trim(), key: settings.apiKey.trim() },
+      api: IS_WEB
+        ? { url: WEB_API_URL, key: '' }
+        : { url: settings.apiUrl.trim(), key: settings.apiKey.trim() },
       update,
-      resetConnection: () => update(DEFAULTS),
-      defaults: DEFAULTS,
+      isWeb: IS_WEB,
     };
   }, [settings, loaded, system, update]);
 

@@ -35,7 +35,13 @@ export default function Settings() {
   const dirty = url.trim() !== s.apiUrl || key.trim() !== s.apiKey;
 
   const saveAndTest = async () => {
-    const cfg = { url: url.trim() || s.defaults.apiUrl, key: key.trim() };
+    let u = url.trim().replace(/\/+$/, '');
+    if (!u) {
+      setTest({ ok: false, text: 'Zadej adresu serveru.' });
+      return;
+    }
+    if (!/^https?:\/\//i.test(u)) u = `http://${u}`;
+    const cfg = { url: u, key: key.trim() };
     setUrl(cfg.url);
     setKey(cfg.key);
     s.update({ apiUrl: cfg.url, apiKey: cfg.key });
@@ -64,54 +70,59 @@ export default function Settings() {
       </Card>
 
       <SectionTitle>Připojení k HomeOS</SectionTitle>
-      <Card style={{ gap: Spacing.three }}>
-        <Field
-          label="Adresa serveru"
-          placeholder="http://192.168.1.50:8080"
-          value={url}
-          onChangeText={setUrl}
-          keyboardType="url"
-          hint={`Výchozí ${s.defaults.apiUrl} (backend na stejném zařízení). Na mobilu zadej IP adresu zařízení s backendem, např. http://192.168.1.50:8080.`}
-        />
-        <Field
-          label={keyRequired === false ? 'API klíč (není potřeba)' : 'API klíč'}
-          placeholder="HOMEOS_API_KEY z backend/.env"
-          value={key}
-          onChangeText={setKey}
-          secureTextEntry
-          hint={
-            keyRequired === false
-              ? 'Backend běží na stejném zařízení, klíč není potřeba.'
-              : keyRequired
-                ? 'Přístup z jiného zařízení: zadej HOMEOS_API_KEY z backend/.env.'
-                : 'Potřeba jen při přístupu z jiného zařízení (mobil).'
-          }
-        />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' }}>
-          <Button label={dirty ? 'Uložit a otestovat' : 'Otestovat'} icon="link-outline" loading={testing} onPress={saveAndTest} />
-          {url.trim() !== s.defaults.apiUrl || key.trim() !== s.defaults.apiKey ? (
-            <Button
-              label="Výchozí (localhost)"
-              icon="refresh-outline"
-              variant="ghost"
-              onPress={() => {
-                s.resetConnection();
-                setUrl(s.defaults.apiUrl);
-                setKey(s.defaults.apiKey);
-                setTest(null);
-              }}
-            />
-          ) : null}
-          {test ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.one, flexShrink: 1 }}>
-              <Icon name={test.ok ? 'checkmark-circle' : 'close-circle'} color={test.ok ? 'success' : 'danger'} />
-              <Text color={test.ok ? 'success' : 'danger'} style={{ flexShrink: 1 }}>
-                {test.text}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      </Card>
+      {s.isWeb ? (
+        <Card style={{ paddingVertical: Spacing.one }}>
+          <InfoRow icon="server-outline" label="Server" value={s.api.url} />
+          <InfoRow
+            icon="link-outline"
+            label="Stav"
+            value={
+              health.error ? (
+                <Text color="danger">Nedostupný</Text>
+              ) : health.data ? (
+                <Text color="success">Připojeno</Text>
+              ) : (
+                <ActivityIndicator />
+              )
+            }
+            last
+          />
+        </Card>
+      ) : (
+        <Card style={{ gap: Spacing.three }}>
+          <Field
+            label="Adresa serveru"
+            placeholder="http://192.168.1.50:8080"
+            value={url}
+            onChangeText={setUrl}
+            keyboardType="url"
+            autoCapitalize="none"
+            autoCorrect={false}
+            hint="IP adresa zařízení s backendem v místní síti, např. http://192.168.1.50:8080."
+          />
+          <Field
+            label="API klíč"
+            placeholder="HOMEOS_API_KEY z backend/.env"
+            value={key}
+            onChangeText={setKey}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            hint={keyRequired === false ? 'Server klíč od tohoto zařízení nevyžaduje.' : 'HOMEOS_API_KEY z backend/.env.'}
+          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' }}>
+            <Button label={dirty ? 'Uložit a otestovat' : 'Otestovat'} icon="link-outline" loading={testing} onPress={saveAndTest} />
+            {test ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.one, flexShrink: 1 }}>
+                <Icon name={test.ok ? 'checkmark-circle' : 'close-circle'} color={test.ok ? 'success' : 'danger'} />
+                <Text color={test.ok ? 'success' : 'danger'} style={{ flexShrink: 1 }}>
+                  {test.text}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </Card>
+      )}
 
       <SectionTitle>Systém (Raspberry Pi)</SectionTitle>
       <Card style={{ paddingVertical: Spacing.one }}>
