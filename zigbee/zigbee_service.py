@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.INFO)
 
 CONFIG = {
     CONF_DEVICE: {CONF_DEVICE_PATH: os.environ.get("ZIGBEE_PORT", "/dev/ttyUSB0")},
-    CONF_DATABASE: os.environ.get("ZIGPY_DB_PATH", "/home/pi/zigbee.db"),
+    CONF_DATABASE: os.environ.get("ZIGPY_DB_PATH", "/root/Home-OS-storage/export.db"),
 }
 
 MAX_PAIRING_S = 254   # vic Zigbee standard nedovoli
