@@ -28,7 +28,7 @@ const KEY = 'homeos.settings';
  * nevyzaduje, klic se zadava jen pro pristup odjinud (mobil v siti).
  */
 export const IS_WEB = Platform.OS === 'web';
-export const WEB_API_URL = 'http://localhost:8080';
+export const WEB_API_URL = 'http://100.107.37.25:8080';
 
 const DEFAULTS = { apiUrl: '', apiKey: '' };
 
@@ -63,7 +63,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       scheme,
       colors: Colors[scheme],
       api: IS_WEB
-        ? { url: WEB_API_URL, key: '' }
+        ? { url: WEB_API_URL, key: settings.apiKey.trim() }
         : { url: settings.apiUrl.trim(), key: settings.apiKey.trim() },
       update,
       isWeb: IS_WEB,

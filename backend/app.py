@@ -74,6 +74,14 @@ def db() -> Database:
         g.db = Database()   # vlastni spojeni pro kazdy pozadavek
     return g.db
 
+def _device_table_and_column(name):
+    table = db().table_of(name)
+    if not table:
+        return None, (jsonify(error=f"Zarizeni {name} neexistuje"), 404)
+    if request.args.get("column", "") not in db().columns(table):
+        return None, (jsonify(error="Neznamy sloupec"), 400)
+    return table, None
+
 
 @app.teardown_appcontext
 def close_db(_exc):
@@ -126,6 +134,23 @@ def readings(name):
     if not 1 <= limit <= 10000:
         return jsonify(error="limit musi byt 1-10000"), 400
     return jsonify(db().readings(table, since=request.args.get("since"), limit=limit))
+
+@app.get("/api/devices/<name>/stats")
+@require_key
+def device_stats(name):
+    table, err = _device_table_and_column(name)
+    if err: return err
+    return jsonify(db().stats(table, request.args["column"], request.args.get("since") or None))
+
+@app.get("/api/devices/<name>/history")
+@require_key
+def device_history(name):
+    table, err = _device_table_and_column(name)
+    if err: return err
+    points = request.args.get("points", 300, type=int)
+    if not 2 <= points <= 2000:
+        return jsonify(error="points musi byt 2-2000"), 400
+    return jsonify(db().history(table, request.args["column"], request.args.get("since") or None, points))
 
 
 # --------------------------------------------------------------------------
