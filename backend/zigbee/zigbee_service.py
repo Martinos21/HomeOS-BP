@@ -18,8 +18,6 @@ import asyncio
 import logging
 import os
 import time
-from dataclasses import dataclass
-from typing import Callable
 
 from bellows.zigbee.application import ControllerApplication
 from dotenv import load_dotenv
@@ -27,7 +25,7 @@ from zigpy.config import CONF_DATABASE, CONF_DEVICE, CONF_DEVICE_PATH
 from zigpy.zcl import AttributeReportedEvent, AttributeUpdatedEvent
 
 from tools.db import Database
-from zigbee.metrics import METRICS, Metric
+from backend.zigbee.metrics import METRICS, Metric
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)

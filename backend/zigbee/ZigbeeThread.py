@@ -2,7 +2,7 @@ import asyncio
 import threading
 import logging
 
-from zigbee.zigbee_service import ZigbeeService, start_zigbee
+from backend.zigbee.zigbee_service import ZigbeeService, start_zigbee
 
 log = logging.getLogger("homeos")
 

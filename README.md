@@ -15,7 +15,7 @@ in one place, stores it, and will later present it in a clear web interface.
 
 | | part | what it does |
 |---|---|---|
-| 📡 | `zigbee/` | receives sensor data and handles pairing of new devices ([more info](zigbee/README.md)) |
+| 📡 | `zigbee/` | receives sensor data and handles pairing of new devices ([more info](backend/zigbee/README.md)) |
 | 🔌 | `zigbee/esp/` | firmware for the ESP sensors, one sketch for all, only the name and sensor type change |
 | ☀️ | `solarAPI/` | fetches data from the solar power system |
 | 🖥️ | `backend/` | public API for the frontend *(in development)* |

@@ -21,19 +21,17 @@ Vse krome /api/health chce hlavicku  X-API-Key: <klic>
   DELETE /api/zigbee/pairing                 zavre parovani
 """
 
-import asyncio
 import logging
 import os
 import secrets
-import threading
 from functools import wraps
 
 from dotenv import load_dotenv
 from flask import Flask, g, jsonify, request
 
 from tools.db import Database
-from zigbee.ZigbeeThread import ZigbeeThread
-from zigbee.zigbee_service import MAX_PAIRING_S, ZigbeeService, start_zigbee
+from backend.zigbee.ZigbeeThread import ZigbeeThread
+from backend.zigbee.zigbee_service import MAX_PAIRING_S
 
 load_dotenv()
 
